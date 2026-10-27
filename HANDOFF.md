@@ -19,10 +19,10 @@ App quản lý support cho hệ thống giàn khoan, sử dụng trên điện t
 - Nhánh: `main`; repo riêng tư.
 - Site: https://quan-ly-support-gian-khoan.manhcaoptsc1.chatgpt.site/
 - Site project ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6` (cũng nằm trong `.openai/hosting.json`).
-- Phiên bản Site gần nhất đã xác nhận phát hành trong cuộc trò chuyện: **9**.
-- Saved version ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6~appgver_69265a38bd9c81919fc97930fb5f268f`.
-- Deployment ID thành công: `appgdep_6ae084e0a4988191b55a6cb4f45c6d0a`.
-- Commit của **kho nguồn Sites** dùng cho v9: `18079f237f18254c4398dffbfeca8ff857ababa2`.
+- Phiên bản Site gần nhất đã xác nhận phát hành trong cuộc trò chuyện: **10**.
+- Saved version ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6~appgver_994d4d0a4c748191971ee3eeca5893f6`.
+- Deployment ID thành công: `appgdep_6ae08810fc3081919b2ebf4859ec2434`.
+- Commit của **kho nguồn Sites** dùng cho v10: `bfd65fbed5e136cc81fd65695dc01e3827721016`.
 - GitHub được khởi tạo bằng một bản sao sạch của source v8 và thêm README/build script. Lịch sử commit GitHub khác kho nguồn Sites; không dùng SHA của GitHub để gọi lưu phiên bản Sites khi chưa đồng bộ sang kho nguồn Sites.
 - Commit GitHub đã xác minh chứa bản sao nguồn trước khi bổ sung bàn giao: `b5c9e55db766353a94a67f58cb1277262d27d39f`.
 
@@ -36,7 +36,9 @@ Tài liệu bàn giao và hướng dẫn agent là thay đổi trong GitHub, kh�
 
 **v9:** Bộ lọc dự án/module và tìm mã/tên support áp dụng cho cả bảng kế hoạch và danh mục loại support. Một loại support có thể xuất hiện ở nhiều module thông qua các kế hoạch tương ứng; khi chọn dự án/module, danh mục chỉ hiện loại đã có kế hoạch trong phạm vi đó. Module ở Quản trị và bộ lọc khi xem tất cả dự án hiển thị kèm mã dự án. Chuyển tab tải lại dữ liệu; lựa chọn bộ lọc không còn hợp lệ được xóa sau khi tải lại. Vùng trống có thông báo rõ. Không thay đổi schema hay dữ liệu D1/R2.
 
-Kiểm tra v9: cú pháp Worker và script nhúng, build, kiểm tra logic lọc bằng dữ liệu mẫu (kể cả loại support dùng chung nhiều module), đóng gói và kết quả phát hành Sites thành công. Chưa kiểm thử thao tác trực tiếp trên Site bằng trình duyệt trong lần này; kiểm tra UI thực tế khi có quyền trình duyệt.
+**v10:** Form Thêm/Sửa loại support chọn module từ Quản trị (có thể nhiều module, nhóm theo dự án). Mã support hiển thị tự lấy từ mã module; tên do admin nhập. Một module có thể có nhiều loại support cùng mã hiển thị, và một loại dùng ở nhiều module. Bảng `support_modules` lưu liên kết trực tiếp, không cần kế hoạch; kế hoạch mới tự bổ sung liên kết. Các màn hình, tìm kiếm và CSV hiển thị mã module theo ngữ cảnh; `supports.code` trong D1 giữ vai trò khóa nội bộ duy nhất, không dùng làm mã hiển thị cho bản ghi mới. Với bản ghi cũ chưa liên kết, UI nhận diện module khi mã cũ khớp duy nhất; khi sửa support hoặc mã module, liên kết được lưu. Module đã có kế hoạch không thể bỏ liên kết trong form. Migration `0004_support_modules.sql` chỉ tạo bảng/index, không sửa dữ liệu cũ. Site xác nhận deploy thành công và bảng mới xuất hiện trong D1.
+
+Kiểm tra v10: cú pháp Worker và script nhúng, build, kiểm tra logic lọc bằng dữ liệu mẫu (nhiều loại trên một module, một loại trên nhiều module và support cũ), chạy các migration trong SQLite để kiểm tra schema, đóng gói, deploy thành công và xác nhận bảng `support_modules` ở D1. Chưa kiểm thử thao tác nhập liệu trực tiếp trên Site bằng trình duyệt trong lần này.
 
 ## Bản đồ mã và dữ liệu
 
@@ -49,8 +51,8 @@ Kiểm tra v9: cú pháp Worker và script nhúng, build, kiểm tra logic lọc
 - Dán ảnh: `imageFromClipboard()`, xử lý `onpaste` trong `supportForm()` và `bindDocumentActions()`.
 - Đóng hộp thoại: listener trên `#modal` chỉ đóng khi target có class `dialog`, không phải khi bấm bên trong hộp.
 - D1 binding: `DB`. R2 binding: `BUCKET`.
-- Các bảng: `members`, `projects`, `modules`, `supports`, `plans`, `batches`, `drawings`, `materials`, `stock_moves`, `stock_slips`, `files`, `audit`.
-- Migration: `0000_initial.sql` (schema/trigger nghiệp vụ), `0001_stock_slips.sql`, `0002_files.sql`, `0003_admin_guard.sql` (giữ ít nhất một admin).
+- Các bảng: `members`, `projects`, `modules`, `supports`, `support_modules`, `plans`, `batches`, `drawings`, `materials`, `stock_moves`, `stock_slips`, `files`, `audit`.
+- Migration: `0000_initial.sql` (schema/trigger nghiệp vụ), `0001_stock_slips.sql`, `0002_files.sql`, `0003_admin_guard.sql` (giữ ít nhất một admin), `0004_support_modules.sql` (liên kết support–module).
 - `plans.required`: số lượng thực tế cần chế tạo; `plans.completed`: số đã làm. Đây không phải tồn kho nguyên vật liệu. Trigger từ `batches` cập nhật tiến độ; trigger từ `stock_moves` cập nhật tồn kho và chặn tồn âm.
 - `files.object_key` liên kết bản ghi D1 với object R2. Phải sao lưu cả hai nếu muốn khôi phục file đầy đủ.
 
