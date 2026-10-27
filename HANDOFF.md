@@ -19,10 +19,10 @@ App quản lý support cho hệ thống giàn khoan, sử dụng trên điện t
 - Nhánh: `main`; repo riêng tư.
 - Site: https://quan-ly-support-gian-khoan.manhcaoptsc1.chatgpt.site/
 - Site project ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6` (cũng nằm trong `.openai/hosting.json`).
-- Phiên bản Site gần nhất đã xác nhận phát hành trong cuộc trò chuyện: **10**.
-- Saved version ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6~appgver_994d4d0a4c748191971ee3eeca5893f6`.
-- Deployment ID thành công: `appgdep_6ae08810fc3081919b2ebf4859ec2434`.
-- Commit của **kho nguồn Sites** dùng cho v10: `bfd65fbed5e136cc81fd65695dc01e3827721016`.
+- Phiên bản Site gần nhất đã xác nhận phát hành trong cuộc trò chuyện: **11**.
+- Saved version ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6~appgver_68cf666c40788191a2ecd9d18976f048`.
+- Deployment ID thành công: `appgdep_6ae08a7e99f4819193769f592b2cacbe`.
+- Commit của **kho nguồn Sites** dùng cho v11: `005307770412cc617d7ba16a882ef2bb0a65369e`.
 - GitHub được khởi tạo bằng một bản sao sạch của source v8 và thêm README/build script. Lịch sử commit GitHub khác kho nguồn Sites; không dùng SHA của GitHub để gọi lưu phiên bản Sites khi chưa đồng bộ sang kho nguồn Sites.
 - Commit GitHub đã xác minh chứa bản sao nguồn trước khi bổ sung bàn giao: `b5c9e55db766353a94a67f58cb1277262d27d39f`.
 
@@ -38,7 +38,9 @@ Tài liệu bàn giao và hướng dẫn agent là thay đổi trong GitHub, kh�
 
 **v10:** Form Thêm/Sửa loại support chọn module từ Quản trị (có thể nhiều module, nhóm theo dự án). Mã support hiển thị tự lấy từ mã module; tên do admin nhập. Một module có thể có nhiều loại support cùng mã hiển thị, và một loại dùng ở nhiều module. Bảng `support_modules` lưu liên kết trực tiếp, không cần kế hoạch; kế hoạch mới tự bổ sung liên kết. Các màn hình, tìm kiếm và CSV hiển thị mã module theo ngữ cảnh; `supports.code` trong D1 giữ vai trò khóa nội bộ duy nhất, không dùng làm mã hiển thị cho bản ghi mới. Với bản ghi cũ chưa liên kết, UI nhận diện module khi mã cũ khớp duy nhất; khi sửa support hoặc mã module, liên kết được lưu. Module đã có kế hoạch không thể bỏ liên kết trong form. Migration `0004_support_modules.sql` chỉ tạo bảng/index, không sửa dữ liệu cũ. Site xác nhận deploy thành công và bảng mới xuất hiện trong D1.
 
-Kiểm tra v10: cú pháp Worker và script nhúng, build, kiểm tra logic lọc bằng dữ liệu mẫu (nhiều loại trên một module, một loại trên nhiều module và support cũ), chạy các migration trong SQLite để kiểm tra schema, đóng gói, deploy thành công và xác nhận bảng `support_modules` ở D1. Chưa kiểm thử thao tác nhập liệu trực tiếp trên Site bằng trình duyệt trong lần này.
+**v11:** Nhãn module trong danh mục Support, bảng tiến độ, chi tiết và ô mã tự hiện của form Thêm/Sửa loại support hiển thị cả mã và tên, ví dụ `ELE-MD · Laddersup`. Tìm kiếm khớp cả tên module. Giá trị mã trong D1 vẫn giữ nguyên; CSV có nhãn đầy đủ ở cột Module và mã gốc ở cột Mã support. Không có migration hoặc sửa dữ liệu.
+
+Kiểm tra v11: cú pháp Worker và script nhúng, build, kiểm tra logic lọc/nhãn module bằng dữ liệu mẫu, đóng gói và kết quả phát hành Sites thành công. Chưa kiểm thử thao tác nhập liệu trực tiếp trên Site bằng trình duyệt trong lần này.
 
 ## Bản đồ mã và dữ liệu
 
