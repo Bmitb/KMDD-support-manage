@@ -1,0 +1,10 @@
+dist/
+node_modules/
+.env
+.env.*
+.dev.vars
+*.db
+*.sqlite
+*.sqlite3
+*.zip
+.sites-checkout/

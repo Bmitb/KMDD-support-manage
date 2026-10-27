@@ -1,0 +1,3 @@
+CREATE TABLE stock_slips (id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK(kind IN ('IN','OUT','RETURN','ADJUST')), move_date TEXT NOT NULL, project_id TEXT REFERENCES projects(id), module_id TEXT REFERENCES modules(id), source TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', lines_json TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'DRAFT' CHECK(status IN ('DRAFT','POSTED')), created_by TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, posted_at TEXT);
+ALTER TABLE stock_moves ADD COLUMN slip_id TEXT REFERENCES stock_slips(id);
+CREATE TRIGGER slip_move BEFORE INSERT ON stock_moves WHEN NEW.slip_id IS NOT NULL BEGIN SELECT CASE WHEN (SELECT status FROM stock_slips WHERE id=NEW.slip_id)!='DRAFT' THEN RAISE(ABORT,'Phiếu đã ghi sổ') END; END;
