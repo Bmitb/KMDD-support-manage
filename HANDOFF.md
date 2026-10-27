@@ -19,10 +19,10 @@ App quản lý support cho hệ thống giàn khoan, sử dụng trên điện t
 - Nhánh: `main`; repo riêng tư.
 - Site: https://quan-ly-support-gian-khoan.manhcaoptsc1.chatgpt.site/
 - Site project ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6` (cũng nằm trong `.openai/hosting.json`).
-- Phiên bản Site gần nhất đã xác nhận phát hành trong cuộc trò chuyện: **8**.
-- Saved version ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6~appgver_3fd69aea9bac8191a3c351c215d62ed5`.
-- Deployment ID thành công: `appgdep_6adf864a00388191816bf4f5b5db1f6b`.
-- Commit của **kho nguồn Sites** dùng cho v8: `06569ce0247feb1982b76c354c4e17c6c9268905`.
+- Phiên bản Site gần nhất đã xác nhận phát hành trong cuộc trò chuyện: **9**.
+- Saved version ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6~appgver_69265a38bd9c81919fc97930fb5f268f`.
+- Deployment ID thành công: `appgdep_6ae084e0a4988191b55a6cb4f45c6d0a`.
+- Commit của **kho nguồn Sites** dùng cho v9: `18079f237f18254c4398dffbfeca8ff857ababa2`.
 - GitHub được khởi tạo bằng một bản sao sạch của source v8 và thêm README/build script. Lịch sử commit GitHub khác kho nguồn Sites; không dùng SHA của GitHub để gọi lưu phiên bản Sites khi chưa đồng bộ sang kho nguồn Sites.
 - Commit GitHub đã xác minh chứa bản sao nguồn trước khi bổ sung bàn giao: `b5c9e55db766353a94a67f58cb1277262d27d39f`.
 
@@ -34,7 +34,9 @@ Tài liệu bàn giao và hướng dẫn agent là thay đổi trong GitHub, kh�
 
 **v8:** Admin có thể Ctrl+V ảnh khi đang xem support hoặc trong form Thêm/Sửa support. App nhận PNG/JPG/WebP, mở form/xem trước và chỉ upload khi bấm Lưu. Vẫn giữ chọn file. Giới hạn ảnh 10 MB; PDF 25 MB.
 
-Kiểm tra đã thực hiện: cú pháp Worker, cú pháp script nhúng, xử lý lấy ảnh clipboard bằng kiểm tra Node, đóng gói và kết quả phát hành Sites thành công. **Chưa kiểm thử trực tiếp trên trình duyệt** ở các lần phát hành này vì công cụ báo `Local browser use is disabled in Work settings`. Nếu phiên mới có quyền trình duyệt, kiểm tra thao tác thực tế khi sửa phần liên quan.
+**v9:** Bộ lọc dự án/module và tìm mã/tên support áp dụng cho cả bảng kế hoạch và danh mục loại support. Một loại support có thể xuất hiện ở nhiều module thông qua các kế hoạch tương ứng; khi chọn dự án/module, danh mục chỉ hiện loại đã có kế hoạch trong phạm vi đó. Module ở Quản trị và bộ lọc khi xem tất cả dự án hiển thị kèm mã dự án. Chuyển tab tải lại dữ liệu; lựa chọn bộ lọc không còn hợp lệ được xóa sau khi tải lại. Vùng trống có thông báo rõ. Không thay đổi schema hay dữ liệu D1/R2.
+
+Kiểm tra v9: cú pháp Worker và script nhúng, build, kiểm tra logic lọc bằng dữ liệu mẫu (kể cả loại support dùng chung nhiều module), đóng gói và kết quả phát hành Sites thành công. Chưa kiểm thử thao tác trực tiếp trên Site bằng trình duyệt trong lần này; kiểm tra UI thực tế khi có quyền trình duyệt.
 
 ## Bản đồ mã và dữ liệu
 
