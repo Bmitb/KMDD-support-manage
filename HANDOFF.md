@@ -19,10 +19,10 @@ App quản lý support cho hệ thống giàn khoan, sử dụng trên điện t
 - Nhánh: `main`; repo riêng tư.
 - Site: https://quan-ly-support-gian-khoan.manhcaoptsc1.chatgpt.site/
 - Site project ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6` (cũng nằm trong `.openai/hosting.json`).
-- Phiên bản Site gần nhất đã xác nhận phát hành trong cuộc trò chuyện: **14**.
-- Saved version ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6~appgver_5e74d75a7e248191aefa0e5df254fe79`.
-- Deployment ID thành công: `appgdep_6ae1edbadcd481918a94f74a8439b94e`.
-- Commit của **kho nguồn Sites** dùng cho v14: `30f9f299121414ffd29541f1ac53cf7c7c97bac9`.
+- Phiên bản Site gần nhất đã xác nhận phát hành trong cuộc trò chuyện: **15**.
+- Saved version ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6~appgver_4a57c4c58e9c8191ae96b1365c2817ae`.
+- Deployment ID thành công: `appgdep_6ae1feea6dfc81919f7ce1519b24d961`.
+- Commit của **kho nguồn Sites** dùng cho v15: `bf668f69e01d2afa1b1498e916946379126e6b9a`.
 - GitHub được khởi tạo bằng một bản sao sạch của source v8 và thêm README/build script. Lịch sử commit GitHub khác kho nguồn Sites; không dùng SHA của GitHub để gọi lưu phiên bản Sites khi chưa đồng bộ sang kho nguồn Sites.
 - Commit GitHub đã xác minh chứa bản sao nguồn trước khi bổ sung bàn giao: `b5c9e55db766353a94a67f58cb1277262d27d39f`.
 
@@ -46,6 +46,10 @@ Tài liệu bàn giao và hướng dẫn agent là thay đổi trong GitHub, kh�
 
 **v14:** Cho phép nhiều dự án có cùng mã hiển thị nhưng tên khác nhau. Migration `0005_project_display_code.sql` thêm cột `display_code`; mã `projects.code` cũ vẫn là khóa nội bộ duy nhất, bản ghi cũ hiển thị mã cũ khi chưa có `display_code`. Dự án mới dùng mã nội bộ tạo từ ID, mã người dùng nhập lưu ở `display_code`; khi sửa dự án chỉ cập nhật mã hiển thị và tên. Các liên kết module, kho và kế hoạch vẫn dựa trên `projects.id`. Các ô chọn dự án trong phiếu kho hiện cả mã và tên để phân biệt mã trùng.
 
+**v15:** Cho phép nhiều module trong cùng dự án dùng chung mã hiển thị. Migration `0006_module_display_code.sql` thêm cột `display_code`; `modules.code` cũ vẫn là khóa nội bộ duy nhất theo dự án. Module mới dùng mã nội bộ từ ID; tên và mã hiển thị do admin nhập. API trả về mã hiển thị và bản ghi cũ tiếp tục dùng mã cũ khi chưa có `display_code`. Các liên kết support, kế hoạch và kho vẫn dựa trên `modules.id`. Ô chọn module ở bộ lọc, kế hoạch và phiếu kho hiện cả dự án, mã và tên để phân biệt. Việc tự nối support cũ theo mã chỉ thực hiện khi mã hiển thị khớp duy nhất.
+
+Kiểm tra v15: cú pháp Worker/JavaScript nhúng, build, migration SQLite thử với hai module chung mã trong một dự án, sửa module và bảo toàn liên kết kế hoạch; Sites xác nhận deploy thành công. Chưa nhập bản ghi thử trên Site đang vận hành.
+
 Kiểm tra v14: cú pháp Worker và JavaScript nhúng, build, toàn bộ migration trên SQLite thử với hai dự án chung mã hiển thị, sửa tên/mã hiển thị và xác nhận module cũ vẫn liên kết đúng ID; Sites deploy thành công. Chưa nhập bản ghi thử trên dữ liệu Site đang vận hành.
 
 Kiểm tra v13: cú pháp Worker và script nhúng, build, kiểm tra lọc bằng tên/mô tả trên dữ liệu mẫu và xác nhận mã module không còn khớp; đóng gói và kết quả phát hành Sites thành công. Chưa kiểm thử nhập liệu trực tiếp trên Site bằng tài khoản Admin trong trình duyệt.
@@ -62,7 +66,7 @@ Kiểm tra v13: cú pháp Worker và script nhúng, build, kiểm tra lọc bằ
 - Đóng hộp thoại: listener trên `#modal` chỉ đóng khi target có class `dialog`, không phải khi bấm bên trong hộp.
 - D1 binding: `DB`. R2 binding: `BUCKET`.
 - Các bảng: `members`, `projects`, `modules`, `supports`, `support_modules`, `plans`, `batches`, `drawings`, `materials`, `stock_moves`, `stock_slips`, `files`, `audit`.
-- Migration: `0000_initial.sql` (schema/trigger nghiệp vụ), `0001_stock_slips.sql`, `0002_files.sql`, `0003_admin_guard.sql` (giữ ít nhất một admin), `0004_support_modules.sql` (liên kết support–module), `0005_project_display_code.sql` (mã dự án hiển thị cho phép trùng).
+- Migration: `0000_initial.sql` (schema/trigger nghiệp vụ), `0001_stock_slips.sql`, `0002_files.sql`, `0003_admin_guard.sql` (giữ ít nhất một admin), `0004_support_modules.sql` (liên kết support–module), `0005_project_display_code.sql` (mã dự án hiển thị cho phép trùng), `0006_module_display_code.sql` (mã module hiển thị cho phép trùng).
 - `plans.required`: số lượng thực tế cần chế tạo; `plans.completed`: số đã làm. Đây không phải tồn kho nguyên vật liệu. Trigger từ `batches` cập nhật tiến độ; trigger từ `stock_moves` cập nhật tồn kho và chặn tồn âm.
 - `files.object_key` liên kết bản ghi D1 với object R2. Phải sao lưu cả hai nếu muốn khôi phục file đầy đủ.
 
