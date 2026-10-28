@@ -19,10 +19,10 @@ App quản lý support cho hệ thống giàn khoan, sử dụng trên điện t
 - Nhánh: `main`; repo riêng tư.
 - Site: https://quan-ly-support-gian-khoan.manhcaoptsc1.chatgpt.site/
 - Site project ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6` (cũng nằm trong `.openai/hosting.json`).
-- Phiên bản Site gần nhất đã xác nhận phát hành trong cuộc trò chuyện: **12**.
-- Saved version ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6~appgver_f795682fb8a88191872e9b00541ca8f2`.
-- Deployment ID thành công: `appgdep_6ae1bcf70fc08191a985d29586d043a2`.
-- Commit của **kho nguồn Sites** dùng cho v12: `ecccaa7b641fe9dc3d9c8a5fa4c38d2f2f87ec66`.
+- Phiên bản Site gần nhất đã xác nhận phát hành trong cuộc trò chuyện: **13**.
+- Saved version ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6~appgver_209ffe0d3af081919f1538632f20da98`.
+- Deployment ID thành công: `appgdep_6ae1c976619c81918c525c9171652a20`.
+- Commit của **kho nguồn Sites** dùng cho v13: `7463acce10a2bcfc86b4a08264f28aa2f846750b`.
 - GitHub được khởi tạo bằng một bản sao sạch của source v8 và thêm README/build script. Lịch sử commit GitHub khác kho nguồn Sites; không dùng SHA của GitHub để gọi lưu phiên bản Sites khi chưa đồng bộ sang kho nguồn Sites.
 - Commit GitHub đã xác minh chứa bản sao nguồn trước khi bổ sung bàn giao: `b5c9e55db766353a94a67f58cb1277262d27d39f`.
 
@@ -42,7 +42,9 @@ Tài liệu bàn giao và hướng dẫn agent là thay đổi trong GitHub, kh�
 
 **v12:** Mã bản vẽ trong form tải/thay PDF Typical và Detail là tùy chọn; API chấp nhận chuỗi rỗng, giao diện hiển thị gọn khi không có mã. Đóng hộp thoại bằng cách bấm nền chỉ xảy ra khi nhấn và thả ngay trên nền, không đóng khi kéo chọn từ bên trong ra ngoài. `/api/state` đọc các bảng bằng một batch D1, chuyển tab hiển thị ngay bằng dữ liệu đã tải và làm mới nền tối đa một lần mỗi 5 giây. Không có migration hoặc sửa dữ liệu vận hành.
 
-Kiểm tra v12: cú pháp Worker và script nhúng, build, kiểm tra lưu PDF Typical với mã rỗng, đọc D1 một batch cho Viewer/Admin, thao tác kéo ra ngoài và bấm nền bằng mô phỏng sự kiện; đóng gói và kết quả phát hành Sites thành công. Đo `/api/state` công khai: trước sửa 5,13 giây lần đầu và 2,37 giây lần hai; sau sửa 3,87 giây lần đầu và 0,40 giây lần hai. Đây là mẫu đo nhỏ, không bảo đảm mọi lần tải. Chưa kiểm thử nhập liệu trực tiếp trên Site bằng tài khoản Admin trong trình duyệt.
+**v13:** Ô tìm kiếm ở Tổng quan và Support có nhãn “Tìm theo mô tả hoặc tên support”. Cả bảng kế hoạch và danh mục loại support chỉ khớp theo `supports.description` hoặc `supports.name`, không tìm theo mã/tên module. Không có migration hay sửa dữ liệu.
+
+Kiểm tra v13: cú pháp Worker và script nhúng, build, kiểm tra lọc bằng tên/mô tả trên dữ liệu mẫu và xác nhận mã module không còn khớp; đóng gói và kết quả phát hành Sites thành công. Chưa kiểm thử nhập liệu trực tiếp trên Site bằng tài khoản Admin trong trình duyệt.
 
 ## Bản đồ mã và dữ liệu
 
