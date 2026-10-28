@@ -19,10 +19,10 @@ App quản lý support cho hệ thống giàn khoan, sử dụng trên điện t
 - Nhánh: `main`; repo riêng tư.
 - Site: https://quan-ly-support-gian-khoan.manhcaoptsc1.chatgpt.site/
 - Site project ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6` (cũng nằm trong `.openai/hosting.json`).
-- Phiên bản Site gần nhất đã xác nhận phát hành trong cuộc trò chuyện: **13**.
-- Saved version ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6~appgver_209ffe0d3af081919f1538632f20da98`.
-- Deployment ID thành công: `appgdep_6ae1c976619c81918c525c9171652a20`.
-- Commit của **kho nguồn Sites** dùng cho v13: `7463acce10a2bcfc86b4a08264f28aa2f846750b`.
+- Phiên bản Site gần nhất đã xác nhận phát hành trong cuộc trò chuyện: **14**.
+- Saved version ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6~appgver_5e74d75a7e248191aefa0e5df254fe79`.
+- Deployment ID thành công: `appgdep_6ae1edbadcd481918a94f74a8439b94e`.
+- Commit của **kho nguồn Sites** dùng cho v14: `30f9f299121414ffd29541f1ac53cf7c7c97bac9`.
 - GitHub được khởi tạo bằng một bản sao sạch của source v8 và thêm README/build script. Lịch sử commit GitHub khác kho nguồn Sites; không dùng SHA của GitHub để gọi lưu phiên bản Sites khi chưa đồng bộ sang kho nguồn Sites.
 - Commit GitHub đã xác minh chứa bản sao nguồn trước khi bổ sung bàn giao: `b5c9e55db766353a94a67f58cb1277262d27d39f`.
 
@@ -44,6 +44,10 @@ Tài liệu bàn giao và hướng dẫn agent là thay đổi trong GitHub, kh�
 
 **v13:** Ô tìm kiếm ở Tổng quan và Support có nhãn “Tìm theo mô tả hoặc tên support”. Cả bảng kế hoạch và danh mục loại support chỉ khớp theo `supports.description` hoặc `supports.name`, không tìm theo mã/tên module. Không có migration hay sửa dữ liệu.
 
+**v14:** Cho phép nhiều dự án có cùng mã hiển thị nhưng tên khác nhau. Migration `0005_project_display_code.sql` thêm cột `display_code`; mã `projects.code` cũ vẫn là khóa nội bộ duy nhất, bản ghi cũ hiển thị mã cũ khi chưa có `display_code`. Dự án mới dùng mã nội bộ tạo từ ID, mã người dùng nhập lưu ở `display_code`; khi sửa dự án chỉ cập nhật mã hiển thị và tên. Các liên kết module, kho và kế hoạch vẫn dựa trên `projects.id`. Các ô chọn dự án trong phiếu kho hiện cả mã và tên để phân biệt mã trùng.
+
+Kiểm tra v14: cú pháp Worker và JavaScript nhúng, build, toàn bộ migration trên SQLite thử với hai dự án chung mã hiển thị, sửa tên/mã hiển thị và xác nhận module cũ vẫn liên kết đúng ID; Sites deploy thành công. Chưa nhập bản ghi thử trên dữ liệu Site đang vận hành.
+
 Kiểm tra v13: cú pháp Worker và script nhúng, build, kiểm tra lọc bằng tên/mô tả trên dữ liệu mẫu và xác nhận mã module không còn khớp; đóng gói và kết quả phát hành Sites thành công. Chưa kiểm thử nhập liệu trực tiếp trên Site bằng tài khoản Admin trong trình duyệt.
 
 ## Bản đồ mã và dữ liệu
@@ -58,7 +62,7 @@ Kiểm tra v13: cú pháp Worker và script nhúng, build, kiểm tra lọc bằ
 - Đóng hộp thoại: listener trên `#modal` chỉ đóng khi target có class `dialog`, không phải khi bấm bên trong hộp.
 - D1 binding: `DB`. R2 binding: `BUCKET`.
 - Các bảng: `members`, `projects`, `modules`, `supports`, `support_modules`, `plans`, `batches`, `drawings`, `materials`, `stock_moves`, `stock_slips`, `files`, `audit`.
-- Migration: `0000_initial.sql` (schema/trigger nghiệp vụ), `0001_stock_slips.sql`, `0002_files.sql`, `0003_admin_guard.sql` (giữ ít nhất một admin), `0004_support_modules.sql` (liên kết support–module).
+- Migration: `0000_initial.sql` (schema/trigger nghiệp vụ), `0001_stock_slips.sql`, `0002_files.sql`, `0003_admin_guard.sql` (giữ ít nhất một admin), `0004_support_modules.sql` (liên kết support–module), `0005_project_display_code.sql` (mã dự án hiển thị cho phép trùng).
 - `plans.required`: số lượng thực tế cần chế tạo; `plans.completed`: số đã làm. Đây không phải tồn kho nguyên vật liệu. Trigger từ `batches` cập nhật tiến độ; trigger từ `stock_moves` cập nhật tồn kho và chặn tồn âm.
 - `files.object_key` liên kết bản ghi D1 với object R2. Phải sao lưu cả hai nếu muốn khôi phục file đầy đủ.
 
