@@ -1,6 +1,6 @@
 # Bàn giao Support Control
 
-Cập nhật: 27/10/2026, múi giờ Asia/Bangkok. Tài liệu giúp chat/agent mới tiếp tục mà không cần lịch sử cuộc trò chuyện. Đây là ảnh chụp trạng thái; kiểm tra phiên bản hiện tại trước khi làm tiếp.
+Cập nhật: 28/10/2026, múi giờ Asia/Bangkok. Tài liệu giúp chat/agent mới tiếp tục mà không cần lịch sử cuộc trò chuyện. Đây là ảnh chụp trạng thái; kiểm tra phiên bản hiện tại trước khi làm tiếp.
 
 ## Mục đích và quyết định đã chốt
 
@@ -19,10 +19,10 @@ App quản lý support cho hệ thống giàn khoan, sử dụng trên điện t
 - Nhánh: `main`; repo riêng tư.
 - Site: https://quan-ly-support-gian-khoan.manhcaoptsc1.chatgpt.site/
 - Site project ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6` (cũng nằm trong `.openai/hosting.json`).
-- Phiên bản Site gần nhất đã xác nhận phát hành trong cuộc trò chuyện: **11**.
-- Saved version ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6~appgver_68cf666c40788191a2ecd9d18976f048`.
-- Deployment ID thành công: `appgdep_6ae08a7e99f4819193769f592b2cacbe`.
-- Commit của **kho nguồn Sites** dùng cho v11: `005307770412cc617d7ba16a882ef2bb0a65369e`.
+- Phiên bản Site gần nhất đã xác nhận phát hành trong cuộc trò chuyện: **12**.
+- Saved version ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6~appgver_f795682fb8a88191872e9b00541ca8f2`.
+- Deployment ID thành công: `appgdep_6ae1bcf70fc08191a985d29586d043a2`.
+- Commit của **kho nguồn Sites** dùng cho v12: `ecccaa7b641fe9dc3d9c8a5fa4c38d2f2f87ec66`.
 - GitHub được khởi tạo bằng một bản sao sạch của source v8 và thêm README/build script. Lịch sử commit GitHub khác kho nguồn Sites; không dùng SHA của GitHub để gọi lưu phiên bản Sites khi chưa đồng bộ sang kho nguồn Sites.
 - Commit GitHub đã xác minh chứa bản sao nguồn trước khi bổ sung bàn giao: `b5c9e55db766353a94a67f58cb1277262d27d39f`.
 
@@ -40,7 +40,9 @@ Tài liệu bàn giao và hướng dẫn agent là thay đổi trong GitHub, kh�
 
 **v11:** Nhãn module trong danh mục Support, bảng tiến độ, chi tiết và ô mã tự hiện của form Thêm/Sửa loại support hiển thị cả mã và tên, ví dụ `ELE-MD · Laddersup`. Tìm kiếm khớp cả tên module. Giá trị mã trong D1 vẫn giữ nguyên; CSV có nhãn đầy đủ ở cột Module và mã gốc ở cột Mã support. Không có migration hoặc sửa dữ liệu.
 
-Kiểm tra v11: cú pháp Worker và script nhúng, build, kiểm tra logic lọc/nhãn module bằng dữ liệu mẫu, đóng gói và kết quả phát hành Sites thành công. Chưa kiểm thử thao tác nhập liệu trực tiếp trên Site bằng trình duyệt trong lần này.
+**v12:** Mã bản vẽ trong form tải/thay PDF Typical và Detail là tùy chọn; API chấp nhận chuỗi rỗng, giao diện hiển thị gọn khi không có mã. Đóng hộp thoại bằng cách bấm nền chỉ xảy ra khi nhấn và thả ngay trên nền, không đóng khi kéo chọn từ bên trong ra ngoài. `/api/state` đọc các bảng bằng một batch D1, chuyển tab hiển thị ngay bằng dữ liệu đã tải và làm mới nền tối đa một lần mỗi 5 giây. Không có migration hoặc sửa dữ liệu vận hành.
+
+Kiểm tra v12: cú pháp Worker và script nhúng, build, kiểm tra lưu PDF Typical với mã rỗng, đọc D1 một batch cho Viewer/Admin, thao tác kéo ra ngoài và bấm nền bằng mô phỏng sự kiện; đóng gói và kết quả phát hành Sites thành công. Đo `/api/state` công khai: trước sửa 5,13 giây lần đầu và 2,37 giây lần hai; sau sửa 3,87 giây lần đầu và 0,40 giây lần hai. Đây là mẫu đo nhỏ, không bảo đảm mọi lần tải. Chưa kiểm thử nhập liệu trực tiếp trên Site bằng tài khoản Admin trong trình duyệt.
 
 ## Bản đồ mã và dữ liệu
 

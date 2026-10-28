@@ -1,6 +1,6 @@
 # Support Control – quản lý support giàn khoan
 
-Mã nguồn của web app quản lý support, bản vẽ typical/detail, ảnh support, tiến độ chế tạo, kho vật tư và phân quyền. Bản sao này tương ứng với phiên bản 11 đã phát hành tại [Site hiện tại](https://quan-ly-support-gian-khoan.manhcaoptsc1.chatgpt.site/).
+Mã nguồn của web app quản lý support, bản vẽ typical/detail, ảnh support, tiến độ chế tạo, kho vật tư và phân quyền. Bản sao này tương ứng với phiên bản 12 đã phát hành tại [Site hiện tại](https://quan-ly-support-gian-khoan.manhcaoptsc1.chatgpt.site/).
 
 **Để tiếp tục trong chat mới:** đọc [AGENTS.md](AGENTS.md), [HANDOFF.md](HANDOFF.md) rồi README này. `HANDOFF.md` lưu yêu cầu đã chốt, phiên bản đang chạy, cấu trúc mã, cách phát hành, giới hạn và câu nhắc có thể sao chép sang chat khác.
 
