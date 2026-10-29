@@ -3,6 +3,8 @@ const uid = () => crypto.randomUUID();
 const trim = (v) => String(v ?? '').trim();
 const required = (v, label) => { const s = trim(v); if (!s) throw Error(`Cần nhập ${label}`); return s; };
 const num = (v, label, positive = true) => { const n = Number(v); if (!Number.isFinite(n) || (positive ? n <= 0 : n === 0)) throw Error(`${label} không hợp lệ`); return n; };
+const count = (v, label) => { const n = Number(v); if (!Number.isSafeInteger(n) || n < 0 || trim(v) === '') throw Error(`${label} phải là số nguyên không âm`); return n; };
+const quantity = (v, label) => { const n = Number(v); if (!Number.isFinite(n) || n < 0 || trim(v) === '') throw Error(`${label} phải là số không âm`); return n; };
 const drive = (v) => { const s = trim(v); if (!s) return ''; const u = new URL(s); if (u.protocol !== 'https:' || !['drive.google.com', 'docs.google.com'].includes(u.hostname)) throw Error('Chỉ nhận liên kết Google Drive'); return u.href; };
 const q = (db, sql, ...args) => db.prepare(sql).bind(...args);
 async function fileRef(db, id, purpose) {
@@ -83,6 +85,8 @@ async function state(db, m) {
   readable.forEach((table, i) => {
     out[table] = table === 'projects' || table === 'modules'
       ? rows[i].results.map(({ display_code, ...project }) => ({ ...project, code: display_code ?? project.code }))
+      : table === 'plans'
+      ? rows[i].results.map(plan => ({ ...plan, required: plan.required_override ?? plan.required, completed: plan.completed_override ?? plan.completed }))
       : rows[i].results;
   });
   if (m.role !== 'admin') { out.members = []; out.audit = []; }
@@ -111,6 +115,11 @@ await q(db, 'INSERT INTO members(id,email,role) VALUES(?,?,?)', `pending:${email
   else if (a === 'project_edit') { permit(m,true); await q(db,'UPDATE projects SET display_code=?,name=? WHERE id=?',required(d.code,'mã dự án'),required(d.name,'tên dự án'),required(d.id,'dự án')).run(); }
   else if (a === 'module') { permit(m,true); await q(db,'INSERT INTO modules(id,project_id,code,display_code,name) VALUES(?,?,?,?,?)',id,required(d.project_id,'dự án'),'MOD-'+id,required(d.code,'mã module'),required(d.name,'tên module')).run(); }
   else if (a === 'module_edit') { permit(m,true); const mid=required(d.id,'module'),old=await q(db,'SELECT COALESCE(display_code,code) AS code FROM modules WHERE id=?',mid).first();if(!old)throw Error('Không tìm thấy module');await db.batch([q(db,'INSERT OR IGNORE INTO support_modules(support_id,module_id) SELECT s.id,? FROM supports s WHERE s.code=? AND (SELECT COUNT(*) FROM modules WHERE COALESCE(display_code,code)=?)=1 AND NOT EXISTS (SELECT 1 FROM support_modules sm WHERE sm.support_id=s.id) AND NOT EXISTS (SELECT 1 FROM plans p WHERE p.support_id=s.id)',mid,old.code,old.code),q(db,'UPDATE modules SET project_id=?,display_code=?,name=? WHERE id=?',required(d.project_id,'dự án'),required(d.code,'mã module'),required(d.name,'tên module'),mid)]); }
+  else if (a === 'module_document_counts') {
+    const mid=required(d.id,'module');
+    if (!await q(db,'SELECT id FROM modules WHERE id=?',mid).first()) throw Error('Không tìm thấy module');
+    await q(db,'UPDATE modules SET available_count=?,model_3d_count=?,typical_count=?,detail_count=? WHERE id=?',count(d.available_count,'Số lượng hiện có'),count(d.model_3d_count,'Đã có 3D'),count(d.typical_count,'Đã có Typical'),count(d.detail_count,'Đã có Detail'),mid).run();
+  }
   else if (a === 'support') {
     permit(m,true);
     const moduleIds=await selectedModuleIds(db,d.module_ids);
@@ -124,8 +133,31 @@ await q(db, 'INSERT INTO members(id,email,role) VALUES(?,?,?)', `pending:${email
     await db.batch([q(db,'UPDATE supports SET name=?,description=?,unit=?,note=?,image_url=COALESCE(?,image_url) WHERE id=?',required(d.name,'tên support'),trim(d.description),trim(d.unit)||'cái',trim(d.note),image,sid),q(db,'DELETE FROM support_modules WHERE support_id=? AND module_id NOT IN (SELECT module_id FROM plans WHERE support_id=?)',sid,sid),...moduleIds.map(mid=>q(db,'INSERT OR IGNORE INTO support_modules(support_id,module_id) VALUES(?,?)',sid,mid))]);
   }
   else if (a === 'plan') { permit(m,true); const mid=required(d.module_id,'module'),sid=required(d.support_id,'support');await db.batch([q(db,'INSERT INTO plans(id,module_id,support_id,required) VALUES(?,?,?,?)',id,mid,sid,num(d.required,'số lượng')),q(db,'INSERT OR IGNORE INTO support_modules(support_id,module_id) VALUES(?,?)',sid,mid)]); }
+  else if (a === 'plan_create_summary') {
+    permit(m,true);
+    const mid=required(d.module_id,'module'),sid=required(d.support_id,'support');
+    const actual=num(d.required,'số lượng thực tế'),completed=quantity(d.completed,'Đã làm xong');
+    if (completed>actual) throw Error('Đã làm xong không được vượt số lượng thực tế');
+    await db.batch([
+      q(db,'INSERT INTO plans(id,module_id,support_id,required,required_override,completed_override) VALUES(?,?,?,?,?,?)',id,mid,sid,actual,actual,completed),
+      q(db,'INSERT OR IGNORE INTO support_modules(support_id,module_id) VALUES(?,?)',sid,mid),
+      q(db,'INSERT INTO quantity_updates(id,plan_id,actual_before,actual_after,completed_before,completed_after,actor) VALUES(?,?,?,?,?,?,?)',uid(),id,0,actual,0,completed,m.id)
+    ]);
+  }
   else if (a === 'start') { await q(db,'UPDATE plans SET started=1 WHERE id=?',required(d.id,'kế hoạch')).run(); }
-  else if (a === 'plan_qty') { permit(m,true); const qty=num(d.required,'số lượng'); const p=await q(db,'SELECT completed FROM plans WHERE id=?',required(d.id,'kế hoạch')).first(); if (!p || qty<p.completed) throw Error('Số lượng mới nhỏ hơn số đã chế tạo'); await q(db,'UPDATE plans SET required=? WHERE id=?',qty,d.id).run(); }
+  else if (a === 'plan_summary' || a === 'plan_qty') {
+    const pid=required(d.id,'kế hoạch');
+    const old=await q(db,'SELECT required,completed,required_override,completed_override FROM plans WHERE id=?',pid).first();
+    if (!old) throw Error('Không tìm thấy kế hoạch');
+    const beforeActual=old.required_override ?? old.required, beforeCompleted=old.completed_override ?? old.completed;
+    const actual=quantity(d.required,'Số lượng thực tế');
+    const completed=a==='plan_qty'?beforeCompleted:quantity(d.completed,'Đã làm xong');
+    if (completed>actual) throw Error('Đã làm xong không được vượt số lượng thực tế');
+    if (actual!==beforeActual || completed!==beforeCompleted) await db.batch([
+      q(db,'UPDATE plans SET required_override=?,completed_override=? WHERE id=?',actual,completed,pid),
+      q(db,'INSERT INTO quantity_updates(id,plan_id,actual_before,actual_after,completed_before,completed_after,actor) VALUES(?,?,?,?,?,?,?)',uid(),pid,beforeActual,actual,beforeCompleted,completed,m.id)
+    ]);
+  }
   else if (a === 'batch') { if (await q(db,'SELECT id FROM batches WHERE id=?',id).first()) return; await q(db,'INSERT INTO batches(id,plan_id,qty,work_date,note,photo_url,created_by) VALUES(?,?,?,?,?,?,?)',id,required(d.plan_id,'kế hoạch'),num(d.qty,'số lượng'),required(d.work_date,'ngày'),trim(d.note),drive(d.photo_url),m.id).run(); }
   else if (a === 'void_batch') { permit(m,true); await q(db,'UPDATE batches SET voided=1,void_reason=? WHERE id=? AND voided=0',required(d.reason,'lý do hủy'),required(d.id,'đợt chế tạo')).run(); }
   else if (a === 'drawing') { permit(m,true); if (!['typical','detail'].includes(d.kind)||!['pdf','dwg','image'].includes(d.file_type)) throw Error('Loại bản vẽ không hợp lệ'); const sid=required(d.support_id,'support'),code=trim(d.code); await q(db,'UPDATE drawings SET current=0 WHERE support_id=? AND kind=? AND code=?',sid,d.kind,code).run(); await q(db,'INSERT INTO drawings(id,support_id,kind,code,revision,issue_date,file_url,file_type) VALUES(?,?,?,?,?,?,?,?)',id,sid,d.kind,code,trim(d.revision),trim(d.issue_date),drive(d.file_url),d.file_type).run(); }
@@ -177,6 +209,11 @@ export default {
         return serveFile(env,m,id);
       }
       if (url.pathname === '/api/state' && request.method === 'GET') return json(await state(env.DB,m));
+      if (url.pathname === '/api/quantity-history' && request.method === 'GET') {
+        const pid=required(url.searchParams.get('plan_id'),'kế hoạch');
+        const rows=await q(env.DB,'SELECT actual_before,actual_after,completed_before,completed_after,created_at FROM quantity_updates WHERE plan_id=? ORDER BY rowid DESC',pid).all();
+        return json(rows.results);
+      }
       if (url.pathname === '/api/action' && request.method === 'POST') { await act(env.DB,m,await request.json()); return json({ok:true}); }
       return json({error:'Không tìm thấy'},404);
     } catch(e) { const message=String(e.message||e); return json({error:message},message==='Cần đăng nhập'?401:message.includes('quyền')?403:400); }
@@ -310,7 +347,18 @@ function editRole(email){
 }
 function overview(){let rows=filtered(),need=rows.reduce((n,p)=>n+p.required,0),done=rows.reduce((n,p)=>n+p.completed,0);return '<div class="top"><h2>Tổng quan chế tạo</h2><button class="secondary" data-export="plans">Xuất Excel (CSV)</button></div>'+filters()+'<div class="grid"><div class="card">Loại support<div class="metric">'+rows.length+'</div></div><div class="card">Số lượng thực tế<div class="metric">'+fmt(need)+'</div></div><div class="card">Đã làm xong<div class="metric">'+fmt(done)+'</div></div><div class="card">Còn lại<div class="metric">'+fmt(need-done)+'</div></div></div><h3 class="section">Tiến độ theo module</h3>'+planTable(rows)}
 function visibleSupports(){const term=search.toLowerCase();return S.supports.filter(s=>{const linked=modulesForSupport(s).some(m=>(!project||m.project_id===project)&&(!module||m.id===module));return(!(project||module)||linked)&&(!term||[s.description,s.name].join(' ').toLowerCase().includes(term))})}
-function supports(){const plans=filtered(),catalog=visibleSupports();return '<div class="top"><h2>Danh sách support</h2><div><button class="secondary" data-export="plans">Xuất Excel (CSV)</button> '+(admin()?'<button data-new="support">+ Loại support</button> <button data-new="plan">+ Kế hoạch</button>':'')+'</div></div>'+filters()+(plans.length?planTable(plans):'<div class="notice">Chưa có kế hoạch support phù hợp với bộ lọc.</div>')+'<h3 class="section">Danh mục loại support</h3>'+(catalog.length?'<div class="scroll"><table><tr><th>Mã module</th><th>Tên support</th><th>Đơn vị</th><th>Mô tả</th><th></th></tr>'+catalog.map(s=>'<tr><td><b>'+esc(supportCode(s))+'</b></td><td>'+esc(s.name)+'</td><td>'+esc(s.unit)+'</td><td>'+esc(s.description)+'</td><td><button class="secondary" data-open-support="'+esc(s.id)+'">Xem</button> '+(admin()?'<button class="secondary" data-edit-support="'+esc(s.id)+'">Sửa</button>':'')+'</td></tr>').join('')+'</table></div>':'<div class="notice">'+(project||module?'Chưa có loại support gắn với module trong phạm vi đã chọn.':'Không có loại support phù hợp với từ khóa.')+'</div>')}
+function moduleDocumentSummary(){
+  const m=map(S.modules,module);
+  if(!m)return '';
+  const metrics=[['Hiện có',m.available_count],['Đã có 3D',m.model_3d_count],['Đã có Typical',m.typical_count],['Đã có Detail',m.detail_count]];
+  return '<div class="top"><h3 class="section">Số lượng của module '+esc(moduleLabel(m))+'</h3>'+(can()?'<button class="secondary" data-edit-module-counts="'+esc(m.id)+'">Cập nhật số lượng</button>':'')+'</div><div class="grid">'+metrics.map(([label,value])=>'<div class="card">'+esc(label)+'<div class="metric">'+fmt(value)+'</div></div>').join('')+'</div>';
+}
+function countField(name,label,value){return '<label>'+esc(label)+'</label><input name="'+name+'" type="number" min="0" step="1" value="'+esc(value??0)+'" required>'}
+function editModuleCounts(id){
+  const m=map(S.modules,id);
+  dialog('Số lượng module '+moduleLabel(m),countField('available_count','Hiện có',m.available_count)+countField('model_3d_count','Đã có 3D',m.model_3d_count)+countField('typical_count','Đã có Typical',m.typical_count)+countField('detail_count','Đã có Detail',m.detail_count),'module_document_counts',f=>({...data(f),id}));
+}
+function supports(){const plans=filtered(),catalog=visibleSupports();return '<div class="top"><h2>Danh sách support</h2><div><button class="secondary" data-export="plans">Xuất Excel (CSV)</button> '+(admin()?'<button data-new="support">+ Loại support</button> <button data-new="plan">+ Kế hoạch</button>':'')+'</div></div>'+filters()+moduleDocumentSummary()+(plans.length?planTable(plans):'<div class="notice">Chưa có kế hoạch support phù hợp với bộ lọc.</div>')+'<h3 class="section">Danh mục loại support</h3>'+(catalog.length?'<div class="scroll"><table><tr><th>Mã module</th><th>Tên support</th><th>Đơn vị</th><th>Mô tả</th><th></th></tr>'+catalog.map(s=>'<tr><td><b>'+esc(supportCode(s))+'</b></td><td>'+esc(s.name)+'</td><td>'+esc(s.unit)+'</td><td>'+esc(s.description)+'</td><td><button class="secondary" data-open-support="'+esc(s.id)+'">Xem</button> '+(admin()?'<button class="secondary" data-edit-support="'+esc(s.id)+'">Sửa</button>':'')+'</td></tr>').join('')+'</table></div>':'<div class="notice">'+(project||module?'Chưa có loại support gắn với module trong phạm vi đã chọn.':'Không có loại support phù hợp với từ khóa.')+'</div>')}
 function stock(){return '<div class="top"><h2>Kho nguyên vật liệu</h2><div><button class="secondary" data-export="stock">Xuất tồn kho</button> <button class="secondary" data-export="moves">Xuất lịch sử</button> '+(can()?'<button data-new="material">+ Vật tư</button> <button data-new="slip">+ Phiếu nhiều dòng</button> <button data-new="move">+ Ghi nhanh một dòng</button>':'')+'</div></div><div class="scroll"><table><tr><th>Mã</th><th>Tên</th><th>Quy cách</th><th>Tồn</th><th>Đơn vị</th></tr>'+S.materials.map(x=>'<tr><td><b>'+esc(x.code)+'</b></td><td>'+esc(x.name)+'</td><td>'+esc(x.specification)+'</td><td><b>'+fmt(x.stock)+'</b></td><td>'+esc(x.unit)+'</td></tr>').join('')+'</table></div><h3 class="section">Lịch sử nhập xuất</h3><div class="scroll"><table><tr><th>Ngày</th><th>Vật tư</th><th>Loại</th><th>Số lượng</th><th>Nguồn / ghi chú</th></tr>'+S.stock_moves.map(x=>'<tr><td>'+esc(x.move_date)+'</td><td>'+esc(map(S.materials,x.material_id)?.code)+'</td><td>'+esc(x.kind)+'</td><td>'+fmt(x.qty)+'</td><td>'+esc(x.source)+' '+esc(x.note)+'</td></tr>').join('')+'</table></div>'+slipTable()}
 function drawings(){return '<div class="top"><h2>Bản vẽ và hình ảnh</h2>'+(admin()?'<button data-new="drawing">+ Tải PDF</button>':'')+'</div><div class="notice">Mỗi support hiển thị PDF typical và detail hiện hành. Khi thay file, phiên bản cũ được giữ trong lịch sử.</div><div class="scroll"><table><tr><th>Support</th><th>Loại</th><th>Mã bản vẽ</th><th>Revision</th><th>Định dạng</th><th></th></tr>'+S.drawings.map(x=>'<tr><td>'+esc(supportCode(map(S.supports,x.support_id),'',''))+'</td><td>'+esc(x.kind)+'</td><td>'+esc(x.code||'—')+'</td><td>'+esc(x.revision)+(x.current?' · hiện hành':' · cũ')+'</td><td>'+esc(x.file_type)+'</td><td><a href="'+esc(x.file_url)+'" target="_blank" rel="noopener">Mở file</a> '+(x.file_type==='pdf'?'<button class="secondary" data-preview="'+esc(x.id)+'">Xem PDF</button>':'')+'</td></tr>').join('')+'</table></div>'}
 function management(){return '<div class="top"><h2>Quản trị</h2></div><div class="grid"><div class="panel"><h3>Dự án</h3>'+(admin()?'<button data-new="project">+ Dự án</button>':'')+'<p>'+S.projects.map(x=>'<span>'+esc(x.code)+' · '+esc(x.name)+(admin()?' <button class="secondary" data-edit-project="'+esc(x.id)+'">Sửa</button>':'')+'</span>').join('<br>')+'</p></div><div class="panel"><h3>Module</h3>'+(admin()?'<button data-new="module">+ Module</button>':'')+'<p>'+S.modules.map(x=>'<span>'+esc(moduleChoice(x))+(admin()?' <button class="secondary" data-edit-module="'+esc(x.id)+'">Sửa</button>':'')+'</span>').join('<br>')+'</p></div></div>'+(admin()?'<h3 class="section">Phân quyền</h3><div class="panel"><button data-new="member">+ Cấp quyền</button><p>'+S.members.map(x=>'<span>'+esc(x.email)+' · '+esc(x.role)+' <button class="secondary" data-role="'+esc(x.email)+'">Đổi quyền</button> <button class="secondary" data-remove="'+esc(x.email)+'">Thu hồi</button></span>').join('<br>')+'</p></div>':'')}
@@ -325,6 +373,7 @@ function bind(){
   document.querySelectorAll('[data-edit-support]').forEach(b=>b.onclick=()=>supportForm(b.dataset.editSupport));
   document.querySelectorAll('[data-edit-project]').forEach(b=>b.onclick=()=>editProject(b.dataset.editProject));
   document.querySelectorAll('[data-edit-module]').forEach(b=>b.onclick=()=>editModule(b.dataset.editModule));
+  document.querySelectorAll('[data-edit-module-counts]').forEach(b=>b.onclick=()=>editModuleCounts(b.dataset.editModuleCounts));
   document.querySelectorAll('[data-role]').forEach(b=>b.onclick=()=>editRole(b.dataset.role));
   document.querySelectorAll('[data-preview]').forEach(b=>b.onclick=()=>{
     const x=map(S.drawings,b.dataset.preview);
@@ -341,26 +390,46 @@ function bindDocumentActions(){
   if(admin())$('#modal .dialog').onpaste=e=>{const file=imageFromClipboard(e),id=$('#modal [data-image-support]')?.dataset.imageSupport;if(file&&id){e.preventDefault();supportForm(id,file)}};
 }
 function showSupport(id){
-  const s=map(S.supports,id),plans=S.plans.filter(p=>p.support_id===id);
-  if(plans.length===1){showPlan(plans[0].id);return}
+  const s=map(S.supports,id),linked=modulesForSupport(s);
+  const scopedModules=(linked.length?linked:S.modules).filter(m=>(!module||m.id===module)&&(!project||m.project_id===project));
+  const plans=S.plans.filter(p=>p.support_id===id&&scopedModules.some(m=>m.id===p.module_id));
+  const unplanned=scopedModules.filter(m=>!plans.some(p=>p.module_id===m.id));
+  if(plans.length===1&&!unplanned.length){showPlan(plans[0].id);return}
   const total=plans.reduce((n,p)=>n+p.required,0),completed=plans.reduce((n,p)=>n+p.completed,0);
   let body='<button class="secondary" id="close">Đóng</button><h2>'+esc(supportCode(s,'',''))+' · '+esc(s.name)+'</h2><div class="grid"><div class="card">Số lượng thực tế<div class="metric">'+fmt(total)+'</div></div><div class="card">Đã làm xong<div class="metric">'+fmt(completed)+'</div></div><div class="card">Còn lại<div class="metric">'+fmt(total-completed)+'</div></div></div><div class="docgrid">'+documentCard(s,'typical')+documentCard(s,'detail')+documentCard(s,'support_image')+'</div>';
+  if(unplanned.length&&admin())body+='<p><button class="secondary" id="initqty">Nhập số lượng cho support</button></p>';
   if(plans.length)body+='<h3>Tiến độ theo module</h3>'+plans.map(p=>'<p>'+esc(moduleLabel(map(S.modules,p.module_id)))+' · '+fmt(p.completed)+' / '+fmt(p.required)+' <button class="secondary" data-go-plan="'+esc(p.id)+'">Xem</button></p>').join('');
   if(admin())body+='<button data-edit-support="'+esc(s.id)+'">Sửa support</button>';
   $('#modal').innerHTML='<div class="dialog"><div class="box widebox">'+body+'</div></div>';
   $('#close').onclick=close;bindDocumentActions();
+  $('#initqty')?.addEventListener('click',()=>{
+    dialog('Nhập số lượng cho support',select('module_id','Module',unplanned,moduleChoice)+field('required','Số lượng thực tế','number')+field('completed','Đã làm xong','number',0),'plan_create_summary',f=>({...data(f),support_id:id}));
+    if(module)$('#form select[name="module_id"]').value=module;
+  });
   document.querySelectorAll('[data-go-plan]').forEach(b=>b.onclick=()=>showPlan(b.dataset.goPlan));
 }
+function historyTime(value){const d=new Date(String(value).replace(' ','T')+'Z');return Number.isNaN(d.getTime())?value:d.toLocaleString('vi-VN',{timeZone:'Asia/Bangkok'})}
 function showPlan(id){
   const p=map(S.plans,id),s=map(S.supports,p.support_id),m=map(S.modules,p.module_id),bs=S.batches.filter(x=>x.plan_id===id);
-  let body='<button class="secondary" id="close">Đóng</button><h2>'+esc(moduleLabel(m))+' · '+esc(s.name)+'</h2><p>'+esc(moduleLabel(m))+' · '+esc(status(p))+'</p><div class="grid"><div class="card">Số lượng thực tế<div class="metric">'+fmt(p.required)+'</div></div><div class="card">Đã làm xong<div class="metric">'+fmt(p.completed)+'</div></div><div class="card">Còn lại<div class="metric">'+fmt(p.required-p.completed)+'</div></div></div><div class="docgrid">'+documentCard(s,'typical')+documentCard(s,'detail')+documentCard(s,'support_image')+'</div><h3>Lịch sử chế tạo</h3>'+bs.map(x=>'<div class="notice">'+esc(x.work_date)+' · '+fmt(x.qty)+' '+esc(s.unit)+(x.voided?' · ĐÃ HỦY: '+esc(x.void_reason):'')+'<br>'+esc(x.note)+(x.photo_url?' · <a href="'+esc(x.photo_url)+'" target="_blank">Ảnh</a>':'')+(admin()&&!x.voided?' <button class="danger" data-void="'+x.id+'">Hủy đợt</button>':'')+'</div>').join('');
-  if(can())body+='<div class="actions">'+(admin()?'<button class="secondary" data-edit-support="'+esc(s.id)+'">Sửa support</button>':'')+(p.started?'':'<button class="secondary" id="start">Bắt đầu chế tạo</button>')+(admin()?'<button class="secondary" id="editqty">Sửa số lượng thực tế</button>':'')+'<button id="addbatch">+ Ghi nhận chế tạo</button></div>';
+  let body='<button class="secondary" id="close">Đóng</button><h2>'+esc(moduleLabel(m))+' · '+esc(s.name)+'</h2><p>'+esc(moduleLabel(m))+' · '+esc(status(p))+'</p><div class="grid"><div class="card">Số lượng thực tế<div class="metric">'+fmt(p.required)+'</div></div><div class="card">Đã làm xong<div class="metric">'+fmt(p.completed)+'</div></div><div class="card">Còn lại<div class="metric">'+fmt(p.required-p.completed)+'</div></div></div>'+(can()?'<p><button class="secondary" id="editqty">Cập nhật số lượng</button></p>':'')+'<div class="docgrid">'+documentCard(s,'typical')+documentCard(s,'detail')+documentCard(s,'support_image')+'</div>';
+  body+='<button class="secondary" id="toggleHistory">Lịch sử</button><div id="quantityHistory" hidden></div>';
+  if(can())body+='<div class="actions">'+(admin()?'<button class="secondary" data-edit-support="'+esc(s.id)+'">Sửa support</button>':'')+(p.started?'':'<button class="secondary" id="start">Bắt đầu chế tạo</button>')+'<button id="addbatch">+ Ghi nhận chế tạo</button></div>';
   $('#modal').innerHTML='<div class="dialog"><div class="box widebox">'+body+'</div></div>';
   $('#close').onclick=close;bindDocumentActions();
   $('#start')?.addEventListener('click',()=>send('start',{id}));
-  $('#editqty')?.addEventListener('click',()=>dialog('Sửa số lượng thực tế',field('required','Số lượng thực tế','number',p.required),'plan_qty',f=>({...data(f),id})));
+  $('#editqty')?.addEventListener('click',()=>dialog('Cập nhật số lượng',field('required','Số lượng thực tế','number',p.required)+field('completed','Đã làm xong','number',p.completed)+'<p class="muted">Còn lại được tính tự động. Lịch sử chế tạo vẫn được giữ.</p>','plan_summary',f=>({...data(f),id})));
+  $('#toggleHistory').onclick=async()=>{
+    const panel=$('#quantityHistory');
+    if(!panel.hidden){panel.hidden=true;return}
+    panel.hidden=false;panel.innerHTML='<p class="muted">Đang tải lịch sử...</p>';
+    try{
+      const response=await fetch('/api/quantity-history?plan_id='+encodeURIComponent(id),{cache:'no-store'}),updates=await response.json();
+      if(!response.ok)throw Error(updates.error||'Không tải được lịch sử');
+      panel.innerHTML='<h3>Các lần cập nhật số lượng</h3>'+(updates.length?updates.map(x=>'<div class="notice">'+esc(historyTime(x.created_at))+' · Thực tế: '+fmt(x.actual_before)+' → '+fmt(x.actual_after)+' · Đã làm xong: '+fmt(x.completed_before)+' → '+fmt(x.completed_after)+'</div>').join(''):'<p class="muted">Chưa có lần cập nhật số lượng.</p>')+'<h3>Ghi nhận chế tạo</h3>'+(bs.length?bs.map(x=>'<div class="notice">'+esc(x.work_date)+' · '+fmt(x.qty)+' '+esc(s.unit)+(x.voided?' · ĐÃ HỦY: '+esc(x.void_reason):'')+'<br>'+esc(x.note)+(x.photo_url?' · <a href="'+esc(x.photo_url)+'" target="_blank">Ảnh</a>':'')+(admin()&&!x.voided?' <button class="danger" data-void="'+x.id+'">Hủy đợt</button>':'')+'</div>').join(''):'<p class="muted">Chưa có ghi nhận chế tạo.</p>');
+      panel.querySelectorAll('[data-void]').forEach(b=>b.onclick=()=>{const reason=prompt('Nhập lý do hủy đợt chế tạo');if(reason)send('void_batch',{id:b.dataset.void,reason})});
+    }catch(e){panel.innerHTML='<p class="notice">'+esc(e.message)+'</p>'}
+  };
   $('#addbatch')?.addEventListener('click',()=>dialog('Ghi nhận đã làm xong',field('qty','Số lượng hoàn thành','number')+field('work_date','Ngày','date',date())+field('photo_url','Link ảnh thực tế trên Drive','url','',false)+field('note','Ghi chú','text','',false),'batch',f=>({...data(f),plan_id:id})));
-  document.querySelectorAll('[data-void]').forEach(b=>b.onclick=()=>{const reason=prompt('Nhập lý do hủy đợt chế tạo');if(reason)send('void_batch',{id:b.dataset.void,reason})});
 }
 let backdropStart=null;
 $('#modal').addEventListener('pointerdown',e=>{backdropStart=e.target.classList.contains('dialog')?[e.clientX,e.clientY]:null});

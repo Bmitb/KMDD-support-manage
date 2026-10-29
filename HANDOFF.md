@@ -1,6 +1,6 @@
 # Bàn giao Support Control
 
-Cập nhật: 28/10/2026, múi giờ Asia/Bangkok. Tài liệu giúp chat/agent mới tiếp tục mà không cần lịch sử cuộc trò chuyện. Đây là ảnh chụp trạng thái; kiểm tra phiên bản hiện tại trước khi làm tiếp.
+Cập nhật: 29/10/2026, múi giờ Asia/Bangkok. Tài liệu giúp chat/agent mới tiếp tục mà không cần lịch sử cuộc trò chuyện. Đây là ảnh chụp trạng thái; kiểm tra phiên bản hiện tại trước khi làm tiếp.
 
 ## Mục đích và quyết định đã chốt
 
@@ -19,10 +19,10 @@ App quản lý support cho hệ thống giàn khoan, sử dụng trên điện t
 - Nhánh: `main`; repo riêng tư.
 - Site: https://quan-ly-support-gian-khoan.manhcaoptsc1.chatgpt.site/
 - Site project ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6` (cũng nằm trong `.openai/hosting.json`).
-- Phiên bản Site gần nhất đã xác nhận phát hành trong cuộc trò chuyện: **15**.
-- Saved version ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6~appgver_4a57c4c58e9c8191ae96b1365c2817ae`.
-- Deployment ID thành công: `appgdep_6ae1feea6dfc81919f7ce1519b24d961`.
-- Commit của **kho nguồn Sites** dùng cho v15: `bf668f69e01d2afa1b1498e916946379126e6b9a`.
+- Phiên bản Site gần nhất đã xác nhận phát hành trong cuộc trò chuyện: **17**.
+- Saved version ID: `appgprj_6adf12900aec8191be6d2b0e2a9013e6~appgver_0660a07b8bb0819196920c1140fd5380`.
+- Deployment ID thành công: `appgdep_6ae324da6bb4819188de8654ea9407b6`.
+- Commit của **kho nguồn Sites** dùng cho v17: `a974eee5c815ede0d9772b77f8358ab4f20adc84`.
 - GitHub được khởi tạo bằng một bản sao sạch của source v8 và thêm README/build script. Lịch sử commit GitHub khác kho nguồn Sites; không dùng SHA của GitHub để gọi lưu phiên bản Sites khi chưa đồng bộ sang kho nguồn Sites.
 - Commit GitHub đã xác minh chứa bản sao nguồn trước khi bổ sung bàn giao: `b5c9e55db766353a94a67f58cb1277262d27d39f`.
 
@@ -48,6 +48,14 @@ Tài liệu bàn giao và hướng dẫn agent là thay đổi trong GitHub, kh�
 
 **v15:** Cho phép nhiều module trong cùng dự án dùng chung mã hiển thị. Migration `0006_module_display_code.sql` thêm cột `display_code`; `modules.code` cũ vẫn là khóa nội bộ duy nhất theo dự án. Module mới dùng mã nội bộ từ ID; tên và mã hiển thị do admin nhập. API trả về mã hiển thị và bản ghi cũ tiếp tục dùng mã cũ khi chưa có `display_code`. Các liên kết support, kế hoạch và kho vẫn dựa trên `modules.id`. Ô chọn module ở bộ lọc, kế hoạch và phiếu kho hiện cả dự án, mã và tên để phân biệt. Việc tự nối support cũ theo mã chỉ thực hiện khi mã hiển thị khớp duy nhất.
 
+**v16:** Trang Support khi chọn module hiển thị bốn chỉ số nhập tay: Hiện có, Đã có 3D, Đã có Typical, Đã có Detail. Các chỉ số lưu ở `modules` qua migration `0007_module_document_counts.sql`, không tự suy ra từ file đã tải. Trong chi tiết support theo module, admin/editor có thể nhập Số lượng thực tế và Đã làm xong; Còn lại tự tính, không cho Đã làm xong vượt Thực tế. Các giá trị nhập tay lưu ở `plans.required_override` và `plans.completed_override` qua migration `0008_plan_quantity_updates.sql`; khi chưa nhập vẫn dùng số kế hoạch và lịch sử chế tạo cũ. Lần ghi nhận chế tạo mới vẫn lưu trong `batches`, không tự đổi số đã nhập tay. Tổng quan và bảng Support dùng cùng giá trị hiển thị. Nút Lịch sử nhỏ trong chi tiết tải khi bấm, hiển thị các lần sửa số lượng từ `quantity_updates` và các ghi nhận chế tạo cũ. Với support chưa có kế hoạch, admin có thể nhập số lượng từ trang chi tiết để tạo kế hoạch đầu tiên.
+
+**v17:** Bản hoàn thiện của v16: API lịch sử chỉ trả các cột số lượng và thời gian cần hiển thị, không trả định danh người cập nhật qua endpoint công khai. Không có migration mới.
+
+Kiểm tra v17: Sites xác nhận deploy thành công. Các kiểm tra API và migration của v16 áp dụng cho cùng schema; thay đổi v17 chỉ giới hạn cột trả về từ lịch sử.
+
+Kiểm tra v16: toàn bộ migration SQLite trên database thử, cập nhật tay và ghi nhận chế tạo tiếp theo, số 0, bốn chỉ số module, cú pháp Worker/JavaScript nhúng và build. Sites xác nhận phát hành thành công; API Site thật đã đọc được các cột mới và endpoint lịch sử trả kết quả. Không thay dữ liệu vận hành để kiểm thử nhập liệu.
+
 Kiểm tra v15: cú pháp Worker/JavaScript nhúng, build, migration SQLite thử với hai module chung mã trong một dự án, sửa module và bảo toàn liên kết kế hoạch; Sites xác nhận deploy thành công. Chưa nhập bản ghi thử trên Site đang vận hành.
 
 Kiểm tra v14: cú pháp Worker và JavaScript nhúng, build, toàn bộ migration trên SQLite thử với hai dự án chung mã hiển thị, sửa tên/mã hiển thị và xác nhận module cũ vẫn liên kết đúng ID; Sites deploy thành công. Chưa nhập bản ghi thử trên dữ liệu Site đang vận hành.
@@ -66,8 +74,8 @@ Kiểm tra v13: cú pháp Worker và script nhúng, build, kiểm tra lọc bằ
 - Đóng hộp thoại: listener trên `#modal` chỉ đóng khi target có class `dialog`, không phải khi bấm bên trong hộp.
 - D1 binding: `DB`. R2 binding: `BUCKET`.
 - Các bảng: `members`, `projects`, `modules`, `supports`, `support_modules`, `plans`, `batches`, `drawings`, `materials`, `stock_moves`, `stock_slips`, `files`, `audit`.
-- Migration: `0000_initial.sql` (schema/trigger nghiệp vụ), `0001_stock_slips.sql`, `0002_files.sql`, `0003_admin_guard.sql` (giữ ít nhất một admin), `0004_support_modules.sql` (liên kết support–module), `0005_project_display_code.sql` (mã dự án hiển thị cho phép trùng), `0006_module_display_code.sql` (mã module hiển thị cho phép trùng).
-- `plans.required`: số lượng thực tế cần chế tạo; `plans.completed`: số đã làm. Đây không phải tồn kho nguyên vật liệu. Trigger từ `batches` cập nhật tiến độ; trigger từ `stock_moves` cập nhật tồn kho và chặn tồn âm.
+- Migration: `0000_initial.sql` (schema/trigger nghiệp vụ), `0001_stock_slips.sql`, `0002_files.sql`, `0003_admin_guard.sql` (giữ ít nhất một admin), `0004_support_modules.sql` (liên kết support–module), `0005_project_display_code.sql` (mã dự án hiển thị cho phép trùng), `0006_module_display_code.sql` (mã module hiển thị cho phép trùng), `0007_module_document_counts.sql` (bốn số của module), `0008_plan_quantity_updates.sql` (số nhập tay và lịch sử cập nhật).
+- `plans.required`/`completed`: số gốc của kế hoạch và ghi nhận chế tạo. Khi có `required_override`/`completed_override`, UI dùng số nhập tay; ghi nhận chế tạo sau đó vẫn lưu nhưng không đổi số nhập tay. Đây không phải tồn kho nguyên vật liệu. Trigger từ `batches` cập nhật số gốc; trigger từ `stock_moves` cập nhật tồn kho và chặn tồn âm.
 - `files.object_key` liên kết bản ghi D1 với object R2. Phải sao lưu cả hai nếu muốn khôi phục file đầy đủ.
 
 ## Quy trình tiếp tục và phát hành
